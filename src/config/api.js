@@ -1,7 +1,7 @@
 // Backend API Configuration
 
-// Base URL for all API calls
-export const API_BASE_URL = 'https://388b-193-140-250-85.ngrok-free.app';
+// Base URL for all API calls - from .env file
+export const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 // API istekleri için ortak headers
 export const getApiHeaders = (token) => {

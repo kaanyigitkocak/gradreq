@@ -59,40 +59,52 @@ const Login = () => {
             localStorage.setItem('userRole', role);
           }
           
-          // Tüm kullanıcıları dashboard sayfasına yönlendir
-          navigate('/dashboard');
+          // Lokal değişkenleri kontrol et ve redirect et
+          console.log('Redirecting to dashboard...');
+          setTimeout(() => {
+            // Kullanıcıyı anasayfaya yönlendir - küçük bir gecikme ekleyerek UI'ın değişiklikleri kaydetmesini sağla
+            navigate('/dashboard', { replace: true });
+          }, 100);
+          return; // Erken çıkış - bu önemli
         } else {
           console.error('Token structure invalid:', accessToken);
-          setError('Invalid token format received from server');
+          setError('Oturum açılamadı. Lütfen daha sonra tekrar deneyin.');
         }
       } else if (response.data && response.data.requiredAuthenticatorType) {
         // Handle two-factor authentication if implemented
         console.log('2FA required:', response.data.requiredAuthenticatorType);
-        alert('Two-factor authentication required');
+        alert('İki faktörlü doğrulama gerekli');
       } else {
         console.error('Unexpected response structure:', response.data);
-        setError('Unexpected response from server. Please try again.');
+        setError('Beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.');
       }
     } catch (err) {
       console.error('Login failed:', err);
       
-      // More detailed error message
+      // Kullanıcı dostu hata mesajları
       if (err.response) {
         console.error('Response status:', err.response.status);
         console.error('Response data:', err.response.data);
         
-        if (err.response.status === 401) {
-          setError('Invalid email or password. Please try again.');
-        } else if (err.response.data && err.response.data.message) {
-          setError(err.response.data.message);
+        // Tüm 400 ve 401 hataları için aynı kullanıcı dostu mesajı göster
+        if (err.response.status === 400 || err.response.status === 401) {
+          setError('Email adresi veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.');
+        } else if (err.response.status === 403) {
+          setError('Bu hesaba erişim izniniz yok.');
+        } else if (err.response.status === 429) {
+          setError('Çok fazla giriş denemesi. Lütfen biraz bekleyin ve tekrar deneyin.');
+        } else if (err.response.data && (err.response.data.message || err.response.data.Message || err.response.data.detail || err.response.data.Detail)) {
+          // API'den gelen hata mesajını kullan
+          const errorMsg = err.response.data.message || err.response.data.Message || err.response.data.detail || err.response.data.Detail;
+          setError(errorMsg);
         } else {
-          setError(`Server error (${err.response.status}). Please try again later.`);
+          setError('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
         }
       } else if (err.request) {
         console.error('No response received:', err.request);
-        setError('No response from server. Please check your internet connection.');
+        setError('Sunucudan yanıt alınamadı. Lütfen internet bağlantınızı kontrol edin.');
       } else {
-        setError('Login failed. Please try again.');
+        setError('Giriş başarısız oldu. Lütfen tekrar deneyin.');
       }
     } finally {
       setLoading(false);
@@ -221,7 +233,7 @@ const Login = () => {
           </button>
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" style={{ color: 'red', fontWeight: 'bold', marginTop: '15px', textAlign: 'center' }}>{error}</p>}
       </div>
     </div>
   );
