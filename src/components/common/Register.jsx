@@ -182,69 +182,95 @@ const Register = ({ onClose, onRegisterSuccess }) => {
     // Varsayılan hata mesajı
     let errorMessage = 'Bir hata oluştu.';
     
-    if (!error.response || !error.response.data) {
-      return errorMessage;
-    }
-    
-    const responseData = error.response.data;
-    console.error('API hata detayları:', error.response.status, responseData);
-    
-    // Validation hatası durumu (yeni format)
-    if (responseData.Title === "Validation error(s)" && responseData.Errors && Array.isArray(responseData.Errors)) {
-      // Tüm property hatalarını topla
-      const errorDetails = [];
+    // HTTP durum koduna göre kullanıcı dostu mesajlar
+    if (error.response) {
+      const { status } = error.response;
       
-      responseData.Errors.forEach(errorItem => {
-        // Hangi alan için hata olduğunu belirtelim
-        const fieldName = errorItem.Property ? errorItem.Property.split('.').pop() : '';
-        let fieldErrors = [];
-        
-        if (errorItem.Errors && Array.isArray(errorItem.Errors)) {
-          // Tüm hata mesajlarını ekle
-          fieldErrors = [...errorItem.Errors];
-        }
-        
-        // Alan adlarını daha okunabilir hale getir
-        let readableFieldName = fieldName;
-        switch (fieldName) {
-          case 'Email': readableFieldName = 'Email'; break;
-          case 'Password': readableFieldName = 'Şifre'; break;
-          case 'FirstName': readableFieldName = 'Ad'; break;
-          case 'LastName': readableFieldName = 'Soyad'; break;
-          case 'PhoneNumber': readableFieldName = 'Telefon'; break;
-          case 'StudentNumber': readableFieldName = 'Öğrenci Numarası'; break;
-          case 'DepartmentId': readableFieldName = 'Bölüm'; break;
-          case 'FacultyId': readableFieldName = 'Fakülte'; break;
-          default: break;
-        }
-        
-        // Hata alanını ve mesajlarını ekle
-        if (fieldName && fieldErrors.length > 0) {
-          errorDetails.push(`${readableFieldName}: ${fieldErrors.join(', ')}`);
-        }
-      });
+      // Status code'a göre genel mesajlar
+      if (status === 400) {
+        errorMessage = 'Geçersiz istek. Lütfen girdiğiniz bilgileri kontrol edin.';
+      } else if (status === 401) {
+        errorMessage = 'Yetkilendirme başarısız.';
+      } else if (status === 403) {
+        errorMessage = 'Bu işlemi gerçekleştirme yetkiniz yok.';
+      } else if (status === 404) {
+        errorMessage = 'İstenilen kaynak bulunamadı.';
+      } else if (status === 500) {
+        errorMessage = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
+      }
       
-      // Tüm hataları birleştir
-      if (errorDetails.length > 0) {
-        errorMessage = `Doğrulama hatası: ${errorDetails.join(' | ')}`;
-      } else {
-        errorMessage = responseData.Detail || 'Formu doldurmada bazı hatalar oluştu.';
+      // Yanıt verisi yoksa, durum koduna göre oluşturduğumuz mesajı döndür
+      if (!error.response.data) {
+        return errorMessage;
       }
-    }
-    // Business Rule hatası (yeni format)
-    else if (responseData.Type && responseData.Type.includes("/probs/business") && responseData.Detail) {
-      errorMessage = responseData.Detail;
-    }
-    // BusinessException durumu (eski format)
-    else if (typeof responseData === 'string' && responseData.includes('Exception')) {
-      const match = responseData.match(/Exception: (.+?)(\r|\n|$)/);
-      if (match && match[1]) {
-        errorMessage = match[1];
+      
+      const responseData = error.response.data;
+      console.error('API hata detayları:', error.response.status, responseData);
+      
+      // Validation hatası durumu (yeni format)
+      if (responseData.Title === "Validation error(s)" && responseData.Errors && Array.isArray(responseData.Errors)) {
+        // Tüm property hatalarını topla
+        const errorDetails = [];
+        
+        responseData.Errors.forEach(errorItem => {
+          // Hangi alan için hata olduğunu belirtelim
+          const fieldName = errorItem.Property ? errorItem.Property.split('.').pop() : '';
+          let fieldErrors = [];
+          
+          if (errorItem.Errors && Array.isArray(errorItem.Errors)) {
+            // Tüm hata mesajlarını ekle
+            fieldErrors = [...errorItem.Errors];
+          }
+          
+          // Alan adlarını daha okunabilir hale getir
+          let readableFieldName = fieldName;
+          switch (fieldName) {
+            case 'Email': readableFieldName = 'Email'; break;
+            case 'Password': readableFieldName = 'Şifre'; break;
+            case 'FirstName': readableFieldName = 'Ad'; break;
+            case 'LastName': readableFieldName = 'Soyad'; break;
+            case 'PhoneNumber': readableFieldName = 'Telefon'; break;
+            case 'StudentNumber': readableFieldName = 'Öğrenci Numarası'; break;
+            case 'DepartmentId': readableFieldName = 'Bölüm'; break;
+            case 'FacultyId': readableFieldName = 'Fakülte'; break;
+            case 'Code': readableFieldName = 'Doğrulama Kodu'; break;
+            default: break;
+          }
+          
+          // Hata alanını ve mesajlarını ekle
+          if (fieldName && fieldErrors.length > 0) {
+            errorDetails.push(`${readableFieldName}: ${fieldErrors.join(', ')}`);
+          }
+        });
+        
+        // Tüm hataları birleştir
+        if (errorDetails.length > 0) {
+          errorMessage = `Doğrulama hatası: ${errorDetails.join(' | ')}`;
+        } else {
+          errorMessage = responseData.Detail || 'Formu doldurmada bazı hatalar oluştu.';
+        }
       }
-    }
-    // Diğer JSON hata durumları
-    else if (responseData.Detail || responseData.detail || responseData.message || responseData.Title) {
-      errorMessage = responseData.Detail || responseData.detail || responseData.message || responseData.Title;
+      // Business Rule hatası (yeni format)
+      else if (responseData.Type && responseData.Type.includes("/probs/business") && responseData.Detail) {
+        errorMessage = responseData.Detail;
+      }
+      // BusinessException durumu (eski format)
+      else if (typeof responseData === 'string' && responseData.includes('Exception')) {
+        const match = responseData.match(/Exception: (.+?)(\r|\n|$)/);
+        if (match && match[1]) {
+          errorMessage = match[1];
+        }
+      }
+      // Diğer JSON hata durumları
+      else if (responseData.Detail || responseData.detail || responseData.message || responseData.Title) {
+        errorMessage = responseData.Detail || responseData.detail || responseData.message || responseData.Title;
+      }
+    } else if (error.request) {
+      // İstek yapıldı ama yanıt alınamadı
+      errorMessage = 'Sunucudan yanıt alınamadı. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.';
+    } else {
+      // İstek yapılırken bir hata oluştu
+      errorMessage = 'İstek gönderilirken bir hata oluştu. Lütfen tekrar deneyin.';
     }
     
     // Yaygın hata mesajlarını kullanıcı dostu hale getir
@@ -255,11 +281,15 @@ const Register = ({ onClose, onRegisterSuccess }) => {
     } else if (errorMessage.includes("faculty not found")) {
       errorMessage = "Seçilen fakülte bulunamadı.";
     } else if (errorMessage.includes("Invalid verification code")) {
-      errorMessage = "Doğrulama kodu geçersiz.";
+      errorMessage = "Doğrulama kodu geçersiz. Lütfen size gönderilen kodu doğru girdiğinizden emin olun.";
     } else if (errorMessage.includes("Verification code expired")) {
-      errorMessage = "Doğrulama kodunun süresi dolmuş. Yeni kod alın.";
+      errorMessage = "Doğrulama kodunun süresi dolmuş. Lütfen yeni bir kod alın.";
+    } else if (errorMessage.includes("Code is required")) {
+      errorMessage = "Doğrulama kodu gereklidir. Lütfen size gönderilen kodu girin.";
     } else if (errorMessage.includes("Password validation")) {
       errorMessage = "Şifre gereksinimlerini karşılamıyor. En az 6 karakter, 1 büyük harf, 1 küçük harf ve 1 rakam içermelidir.";
+    } else if (errorMessage.includes("Internal Server Error")) {
+      errorMessage = "Sunucu hatası. Lütfen daha sonra tekrar deneyin veya destek ekibimizle iletişime geçin.";
     }
     
     return errorMessage;
@@ -294,6 +324,13 @@ const Register = ({ onClose, onRegisterSuccess }) => {
     setError('');
     setMessage('');
     
+    // Kod boş mu kontrol et
+    if (!code || code.trim() === '') {
+      setError('Lütfen doğrulama kodunu girin.');
+      setLoading(false);
+      return;
+    }
+    
     try {
       // Doğrulama kodunu kontrol et
       await axios.post(getApiUrl('/api/Auth/verify-code'), { 
@@ -306,7 +343,22 @@ const Register = ({ onClose, onRegisterSuccess }) => {
       setStep(3); // Kayıt formu adımına geç
     } catch (error) {
       console.error('Kod doğrulama hatası:', error);
-      setError(extractErrorMessage(error) || 'Doğrulama kodu hatalı veya süresi dolmuş.');
+      
+      // Hata mesajını belirle (özel durumlara göre)
+      let errorMsg = '';
+      
+      // Özellikle 500 Internal Server Error için kontrol
+      if (error.response && error.response.status === 500) {
+        errorMsg = 'Doğrulama kodu hatalı. Lütfen size gönderilen kodu doğru girdiğinizden emin olun.';
+      } else {
+        // Diğer durumlarda genel hata çıkarımı
+        errorMsg = extractErrorMessage(error);
+      }
+      
+      setError(errorMsg || 'Doğrulama kodu hatalı veya süresi dolmuş. Lütfen tekrar kontrol edin.');
+      
+      // Kullanıcıya yeni kod alma seçeneği her hata durumunda göster
+      setMessage('Yeni bir doğrulama kodu almak için "Doğrulama Kodu Gönder" butonuna tıklayabilirsiniz.');
     } finally {
       setLoading(false);
     }
@@ -565,8 +617,8 @@ const Register = ({ onClose, onRegisterSuccess }) => {
     <div style={modalStyle}>
       <div style={formStyle} className="register-form">
         {renderStep()}
-        {message && <p className="success-message">{message}</p>}
-        {error && <p className="error-message">{error}</p>}
+        {error && <p className="error-message" style={{color: 'red', fontWeight: 'bold'}}>{error}</p>}
+        {message && <p className="success-message" style={{color: 'green'}}>{message}</p>}
         
         {step !== 4 && (
           <button 
