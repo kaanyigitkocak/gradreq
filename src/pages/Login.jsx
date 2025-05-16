@@ -57,10 +57,17 @@ const Login = () => {
           // Rolü yerel depoya kaydet
           if (role) {
             localStorage.setItem('userRole', role);
+            
+            // Kullanıcı rolüne göre farklı sayfaya yönlendir
+            if (role === 'Student') {
+              navigate('/student');
+            } else {
+              navigate('/dashboard');
+            }
+          } else {
+            // Rol yoksa varsayılan olarak dashboard'a yönlendir
+            navigate('/dashboard');
           }
-          
-          // Tüm kullanıcıları dashboard sayfasına yönlendir
-          navigate('/dashboard');
         } else {
           console.error('Token structure invalid:', accessToken);
           setError('Invalid token format received from server');
@@ -82,17 +89,50 @@ const Login = () => {
         console.error('Response data:', err.response.data);
         
         if (err.response.status === 401) {
-          setError('Invalid email or password. Please try again.');
-        } else if (err.response.data && err.response.data.message) {
-          setError(err.response.data.message);
+          setError('Geçersiz email veya şifre. Lütfen tekrar deneyin.');
+        } else if (err.response.status === 400) {
+          // 400 hatalarını daha detaylı işle
+          if (err.response.data && err.response.data.Detail) {
+            const errorDetail = err.response.data.Detail;
+            
+            if (errorDetail.includes("User don't exists")) {
+              setError('Bu email adresiyle kayıtlı bir kullanıcı bulunamadı.');
+            } else if (errorDetail.includes("Password don't match")) {
+              setError('Şifre hatalı. Lütfen tekrar deneyin.');
+            } else if (errorDetail.includes("validation errors")) {
+              if (err.response.data.Errors && err.response.data.Errors.length > 0) {
+                // Doğrulama hataları varsa ilk hatayı göster
+                const validationMessage = err.response.data.Errors[0].Errors?.[0];
+                if (validationMessage) {
+                  // Teknik detayları temizle
+                  if (validationMessage.includes("Password") && validationMessage.includes("karakter")) {
+                    setError('Şifre çok kısa. En az 4 karakter girmelisiniz.');
+                  } else {
+                    // Diğer validasyon hataları için de temizleme yapabiliriz
+                    setError('Girdiğiniz bilgiler uygun formatta değil.');
+                  }
+                } else {
+                  setError('Şifre en az 4 karakter olmalıdır.');
+                }
+              } else {
+                setError('Girdiğiniz bilgiler doğrulama kurallarına uymuyor.');
+              }
+            } else {
+              setError(errorDetail);
+            }
+          } else if (err.response.data && err.response.data.message) {
+            setError(err.response.data.message);
+          } else {
+            setError('Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.');
+          }
         } else {
-          setError(`Server error (${err.response.status}). Please try again later.`);
+          setError(`Sunucu hatası (${err.response.status}). Lütfen daha sonra tekrar deneyin.`);
         }
       } else if (err.request) {
         console.error('No response received:', err.request);
-        setError('No response from server. Please check your internet connection.');
+        setError('Sunucudan yanıt alınamadı. Lütfen internet bağlantınızı kontrol edin.');
       } else {
-        setError('Login failed. Please try again.');
+        setError('Giriş başarısız. Lütfen tekrar deneyin.');
       }
     } finally {
       setLoading(false);
@@ -116,11 +156,16 @@ const Login = () => {
     // Global Axios headers'a token'ı ekle
     axios.defaults.headers.common['Authorization'] = `Bearer ${validToken}`;
     
-    // Kullanıcı rolünü belirle (token içinden parse edebiliriz ama basitlik için sabit atıyoruz)
-    localStorage.setItem('userRole', 'Student');
+    // Kullanıcı rolünü belirle
+    const role = 'Student'; // Dev Mode için Student olarak ayarla
+    localStorage.setItem('userRole', role);
     
-    // Dashboard sayfasına yönlendir
-    navigate('/dashboard');
+    // Student rolüne göre yönlendirme yap
+    if (role === 'Student') {
+      navigate('/student');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   // Kullanıcı başarıyla kayıt olduğunda

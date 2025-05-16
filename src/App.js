@@ -6,7 +6,7 @@ import { isAuthenticated, setupAxiosInterceptors, getUserRole } from './utils/au
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import StudentDashboard from './pages/StudentDashboard';
+import Student from './pages/Student';
 
 // Styles
 import './styles/App.css';
@@ -62,7 +62,7 @@ function App() {
           path="/student" 
           element={
             <ProtectedRoute allowedRoles={['Student']}>
-              <StudentDashboard />
+              <Student />
             </ProtectedRoute>
           } 
         />

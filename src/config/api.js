@@ -1,7 +1,7 @@
 // Backend API Configuration
 
 // Base URL for all API calls
-export const API_BASE_URL = 'https://388b-193-140-250-85.ngrok-free.app';
+export const API_BASE_URL = 'https://6bde-193-140-250-251.ngrok-free.app';
 
 // API istekleri için ortak headers
 export const getApiHeaders = (token) => {
